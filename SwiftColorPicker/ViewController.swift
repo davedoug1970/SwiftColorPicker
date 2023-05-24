@@ -18,7 +18,7 @@ class ViewController: UIViewController {
     }
     
     @IBAction func showColorPicker(_ sender: Any) {
-        self.colorPanel.showColorPanel(color: UIColor.white)
+        self.colorPanel.showColorPanel()
     }
 }
 

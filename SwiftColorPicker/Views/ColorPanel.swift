@@ -77,7 +77,7 @@ class ColorPanel: NSObject {
         view.addSubview(satSliderView)
     }
     
-    func showColorPanel(location: CGPoint = .zero, color: UIColor = .systemBackground) {
+    func showColorPanel(location: CGPoint = .zero, color: UIColor = .gray) {
         if (location == .zero) {
             if let center = self.delegate?.view.center {
                 self.view.center = center
