@@ -7,23 +7,29 @@
 
 import UIKit
 
-class ViewController: UIViewController, colorPanelDelegate {
-    func updateColor(color: UIColor) {
-        self.view.backgroundColor = color
-    }
-    
+class ViewController: UIViewController {
     private var colorPanel: ColorPanel!
 
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        self.colorPanel = ColorPanel(parent: self.view, frame: CGRect(x: self.view.center.x - 150, y: self.view.center.y - 150, width: 300, height: 300))
+        self.colorPanel = ColorPanel()
         self.colorPanel.delegate = self
-        self.colorPanel.showColorPanel()
-
     }
-
-
+    
+    @IBAction func showColorPicker(_ sender: Any) {
+        self.colorPanel.showColorPanel(color: UIColor.white)
+    }
 }
 
+extension ViewController: colorPanelDelegate {
+    func dismissColorPanel() {
+        UIView.animate(withDuration: 0.6) {
+            self.colorPanel.view.alpha = 0
+        }
+    }
+    
+    func colorChanged(color: UIColor) {
+        self.view.backgroundColor = color
+    }
+}

@@ -8,15 +8,14 @@
 import UIKit
 
 class ColorPanel: NSObject {
-    private var parent: UIView
-    private var view: UIView!
+    var view: UIView!
     private var colorWheelView: UIView!
     private var innerRidgeView: UIView!
     private var satWheelView: UIView!
     private var frame: CGRect = CGRect(x: 0, y: 0, width: 300, height: 300)
     private var colorWheel = ColorWheel()
-    private var bandWidth = 40.0
-    private let ridgeWidth = 16
+    private var bandWidth = 60.0
+    private let ridgeWidth = 15
     private var hueSliderview: UIView!
     private var initialHueSliderCenter: CGPoint = .zero
     private var hueSliderLimit: Float = 0.0
@@ -27,31 +26,19 @@ class ColorPanel: NSObject {
     private var currentHue: CGFloat = 0.01
     private var currentSat: CGFloat = 0.50
     private var currentBri: CGFloat = 0.50
+    private var scaleFactor = 1.0
     var delegate: colorPanelDelegate?
     
-    init(parent: UIView, frame: CGRect) {
-        self.parent = parent
-        
-        if frame.width < 200 || frame.height < 200 {
-            self.frame = CGRect(origin: frame.origin, size: CGSize(width: 200, height: 200))
-        }
-        
-        if frame.width != frame.height {
-            self.frame = CGRect(origin: frame.origin, size: CGSize(width: frame.width, height: frame.width))
-        }
-        
-        self.frame = frame
-        
+    override init() {
         super.init()
-        
-        if frame.width > 200 {
-            bandWidth = bandWidth * (frame.width/200)
-        }
         
         view = UIView(frame: self.frame)
         view.cornerRadius = self.frame.width/2
         view.backgroundColor = UIColor.systemBackground
         view.dropShadow(radius: 5)
+        
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(didTapView(_:)))
+        view.addGestureRecognizer(tapGestureRecognizer)
 
         colorWheelView = UIView(frame: CGRect(x: ridgeWidth/2, y: ridgeWidth/2, width: Int(self.frame.width) - ridgeWidth, height: Int(self.frame.height) - ridgeWidth))
         colorWheelView.cornerRadius = (self.frame.width - CGFloat(ridgeWidth))/2
@@ -81,29 +68,58 @@ class ColorPanel: NSObject {
         view.addSubview(colorWheelView)
         
         // add hue slider...
-        hueSliderview = createHueSliderView(size: Int(bandWidth) - (ridgeWidth * 2) + 4, frame: self.frame, ridgeWidth: ridgeWidth/2)
+        hueSliderview = createHueSliderView(size: Int(bandWidth) - (ridgeWidth * 2) - 1, frame: self.frame, ridgeWidth: ridgeWidth/2)
         view.addSubview(hueSliderview)
         
         // add sat slider...
         satSliderLimit = Float(satWheelView.frame.width/2)
-        satSliderView = createSatSliderView(size: Int(bandWidth) - (ridgeWidth * 2) + 4, frame: self.frame)
+        satSliderView = createSatSliderView(size: Int(bandWidth) - (ridgeWidth * 2) - 1, frame: self.frame)
         view.addSubview(satSliderView)
     }
     
-    func showColorPanel() {
-        self.parent.addSubview(self.view)
+    func showColorPanel(location: CGPoint = .zero, color: UIColor = .systemBackground) {
+        if (location == .zero) {
+            if let center = self.delegate?.view.center {
+                self.view.center = center
+            }
+        } else {
+            self.view.center = location
+        }
+        
+        initColor(color: color)
+        self.view.alpha = 0
+        self.delegate?.view.addSubview(self.view)
+        
+        UIView.animate(withDuration: 0.6) {
+            self.view.alpha = 1
+        }
         
         // update color for delegate
-        delegate?.updateColor(color: UIColor(hue: currentHue, saturation: currentSat, brightness: currentBri, alpha: 1.0))
+        delegate?.colorChanged(color: UIColor(hue: currentHue, saturation: currentSat, brightness: currentBri, alpha: 1.0))
+    }
+    
+    private func initColor(color: UIColor) {
+        var h = CGFloat()
+        var s = CGFloat()
+        var b = CGFloat()
+        var a = CGFloat()
+        
+        color.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        
+        setHueSliderPosition(hue: h)
+        currentHue = h
+        setSatSliderPosition(sat: s, bri: b)
+        currentSat = s
+        currentBri = b
     }
     
     private func createHueSliderView(size: Int, frame: CGRect, ridgeWidth: Int) -> UIView {
-        let sliderView = createSliderView(frame: CGRect(x: Int(frame.width)/2 - (size/2), y: ridgeWidth - 1, width: size, height: size))
+        let sliderView = createSliderView(frame: CGRect(x: Int(frame.width)/2 - (size/2), y: ridgeWidth + 1, width: size, height: size))
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(didPanHueSlider(_:)))
         sliderView.addGestureRecognizer(panGestureRecognizer)
         
-        hueSliderLimit = Float(view.frame.height/2 - sliderView.frame.height/2) - Float(ridgeWidth - 1)
+        hueSliderLimit = Float(view.frame.height/2 - sliderView.frame.height/2) - Float(ridgeWidth + 1)
         
         return sliderView
     }
@@ -120,11 +136,11 @@ class ColorPanel: NSObject {
     private func createSliderView(frame: CGRect) -> UIView {
         let sliderView = UIView(frame: frame)
         sliderView.cornerRadius = CGFloat(sliderView.frame.width/2)
-        sliderView.layer.borderWidth = 4
+        sliderView.layer.borderWidth = 2
         sliderView.layer.borderColor = UIColor.systemBackground.cgColor
         sliderView.backgroundColor = UIColor.clear
         
-        let innerRidge = UIView(frame: CGRect(x: 4, y: 4, width: Int(sliderView.frame.size.width) - 8, height: Int(sliderView.frame.size.width) - 8))
+        let innerRidge = UIView(frame: CGRect(x: 2, y: 2, width: Int(sliderView.frame.size.width) - 4, height: Int(sliderView.frame.size.width) - 4))
         innerRidge.cornerRadius = CGFloat(innerRidge.frame.width/2)
         innerRidge.layer.borderWidth = 1
         innerRidge.layer.borderColor = UIColor.gray.cgColor
@@ -144,6 +160,9 @@ class ColorPanel: NSObject {
         return sliderView
     }
     
+    @objc func didTapView(_ sender: UITapGestureRecognizer) {
+        delegate?.dismissColorPanel()
+    }
     
     @objc private func didPanHueSlider(_ sender: UIPanGestureRecognizer) {
         switch sender.state {
@@ -159,7 +178,7 @@ class ColorPanel: NSObject {
             hueSliderview.center = sliderInfo.newPosition
             updateSatImageView(angle: sliderInfo.newAngle)
             currentHue = calculateHue(angle: sliderInfo.newAngle)
-            delegate?.updateColor(color: UIColor(hue: currentHue, saturation: currentSat, brightness: currentBri, alpha: 1.0))
+            delegate?.colorChanged(color: UIColor(hue: currentHue, saturation: currentSat, brightness: currentBri, alpha: 1.0))
         default:
             break
         }
@@ -185,22 +204,53 @@ class ColorPanel: NSObject {
             currentSat = 1 - abs(wheelPoint.x/satWheelView.frame.width)
             currentBri = 1 - abs(wheelPoint.y/satWheelView.frame.height)
             
-            delegate?.updateColor(color: UIColor(hue: currentHue, saturation: currentSat, brightness: currentBri, alpha: 1.0))
+            delegate?.colorChanged(color: UIColor(hue: currentHue, saturation: currentSat, brightness: currentBri, alpha: 1.0))
         default:
             break
         }
     }
     
+    private func setHueSliderPosition(hue: CGFloat) {
+        // get the center point
+        let centerX = self.view.frame.width * 0.5
+        let centerY = self.view.frame.height * 0.5
+        
+        // work out the limit to the distance of the picker when moving around the hue bar
+        let limit = CGFloat(hueSliderLimit)
+        
+        // create an angle
+        var angleDeg = 360 - (hue * 360.0)
+        angleDeg = angleDeg - 90
+        
+        if angleDeg < 0 {
+            angleDeg = 360 + angleDeg
+        }
+        
+        let angle = colorWheel.degreesToRadians(angle: angleDeg)
+        
+        // set position of the slider
+        let x = centerX + limit * cos(angle)
+        let y = centerY + limit * sin(angle)
+        
+        hueSliderview.center = CGPoint(x: x, y: y)
+        
+        colorWheel.generateSatImage(size: satWheelView.frame.size, hue: hue)
+        satImageView.image = colorWheel.getSatImage()
+    }
+    
+    private func setSatSliderPosition(sat: CGFloat, bri: CGFloat) {
+        let satPoint = CGPoint(x: self.view.frame.width * (1 - sat), y: self.view.frame.height * (1 - bri))
+        
+        satSliderView.center = newSatSliderPoint(point: satPoint)
+    }
+    
     private func newHueSliderPoint(point: CGPoint) -> (newPosition: CGPoint, newAngle: Float) {
-        // clamp the position of the icon within the circle
-       
         // get the center point of the bkgd image
         let centerX  = Float(self.view.frame.size.width * 0.5)
         let centerY  = Float(self.view.frame.size.height * 0.5)
         
         // work out the limit to the distance of the picker when moving around the hue bar
         let limit = hueSliderLimit
-        //Float(self.view.frame.size.width * 0.5)
         
         // work out the distance difference between the location and center
         let dx = Float(point.x) - centerX
@@ -242,7 +292,7 @@ class ColorPanel: NSObject {
             x = CGFloat(centerX + limit * cosf(angle))
             y = CGFloat(centerY + limit * sinf(angle))
         }
-    
+        
         return CGPoint(x: Double(x), y: Double(y))
     }
  
@@ -271,5 +321,7 @@ class ColorPanel: NSObject {
 }
 
 protocol colorPanelDelegate {
-    func updateColor(color: UIColor)
+    var view: UIView! { get }
+    func colorChanged(color: UIColor)
+    func dismissColorPanel()
 }

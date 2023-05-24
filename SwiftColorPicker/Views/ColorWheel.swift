@@ -45,7 +45,7 @@ struct ColorWheel {
             self.hueImage = nil
         }
         
-        let width = self.hueRadius * 2
+        let width = Int(size.width)
         let height = width
         
         let dataLength = MemoryLayout<RGBPixel>.size * width * height
@@ -148,7 +148,7 @@ struct ColorWheel {
         return angle * 57.29577951
     }
     
-    private func degreesToRadians(angle: CGFloat) -> CGFloat {
+    public func degreesToRadians(angle: CGFloat) -> CGFloat {
         // PI / 180
         return angle * 0.01745329252
     }
